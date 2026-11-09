@@ -1,0 +1,47 @@
+# ── Secrets & environment ──────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Private parameters (real tuned values) ─────────────
+config.local.yaml
+*.local.yaml
+config/wallets.json
+**/wallets.json
+
+# ── Keys / keypairs (never used here; belt and braces) ─
+*.pem
+*.key
+*keypair*.json
+*wallet*.json
+id.json
+id_*
+
+# ── Databases ──────────────────────────────────────────
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ── Logs, exports, data dumps ──────────────────────────
+logs/
+*.log
+exports/
+exports_*/
+*.xlsx
+*.zip
+# sample_data/*.csv is intentionally tracked (sanitised extract)
+*.csv
+!sample_data/*.csv
+
+# ── Python / tooling ───────────────────────────────────
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

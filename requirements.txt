@@ -1,0 +1,9 @@
+# Runtime
+aiohttp>=3.9.0
+websockets>=12.0
+python-dotenv>=1.0.0
+PyYAML>=6.0
+openpyxl>=3.1      # Excel export only
+
+# Tests
+pytest>=8.0

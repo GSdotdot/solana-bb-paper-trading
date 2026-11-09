@@ -1,0 +1,175 @@
+# ═══════════════════════════════════════════════════════════════════════
+# ILLUSTRATIVE VALUES — NOT THE TUNED PARAMETERS
+# ═══════════════════════════════════════════════════════════════════════
+# Arbitrary round numbers chosen only so the unit tests can exercise the
+# real code paths (friction arithmetic, frozen-indicator tick logic, funnel
+# routing, crash-safe persistence). They are deliberately NOT the values
+# used in the private runs and carry no information about the strategy edge.
+# Structure mirrors config.example.yaml one-to-one.
+# ═══════════════════════════════════════════════════════════════════════
+
+friction:
+  dex_fee_pct: 0.02
+  priority_fee_usd: 0.10
+  slippage_threshold_mc: 300000
+  slippage_below: 0.015
+  slippage_above: 0.008
+
+scanner:
+  wide:
+    min_mcap: 40000
+    max_mcap: 900000
+    min_liquidity_ratio: 0.08
+    max_age_seconds: 86400
+    min_volume_5m_usd: 1000
+    fee_table_sol: [[150000, 0.4], [450000, 1.5], [.inf, 2.5]]
+    fee_table_fallback_sol: 2.5
+  narrow:
+    holder_tiers: [[150000, 0.45], [.inf, 0.28]]
+    holder_fallback_max_pct: 0.28
+    holder_tolerance_pct: 0.04
+  borderline:
+    below_min_factor: 0.75
+    above_max_factor: 1.20
+  blacklist_cooldown_hours: 12
+
+funnels:
+  defaults:
+    wide_capacity: 50
+    narrow_capacity: 20
+    full_capacity: 4
+    list_poll_interval_minutes: 8
+    narrow_scan_interval_minutes: 4
+    min_market_cap: 20000
+    max_market_cap: 900000
+    min_liquidity: 5000
+    ws_timeframe_minutes: 1
+  bbup:
+    full_capacity: 4
+    list_poll_interval_minutes: 8
+    narrow_scan_interval_minutes: 4
+    min_volume_5m_usd: 1000
+    ws_timeframe_minutes: 1
+  bbdown:
+    full_capacity: 4
+    list_poll_interval_minutes: 8
+    narrow_scan_interval_minutes: 4
+    min_volume_5m_usd: 0
+    ws_timeframe_minutes: 5
+  buckets:
+    wide_ttl_seconds: 1000
+    narrow_ttl_seconds: 2000
+    full_ttl_seconds: 3000
+    depleted_fill_pct: 0.4
+    critical_fill_pct: 0.2
+    critical_fill_pct_full: 0.6
+  phase_intervals:
+    initial_fill: {list_poll_minutes: 3, narrow_scan_minutes: 3, ttl_check_minutes: 3}
+    maintenance:  {list_poll_minutes: 9, narrow_scan_minutes: 9, ttl_check_minutes: 9}
+    refill:       {list_poll_minutes: 4, narrow_scan_minutes: 6, narrow_scan_minutes_critical: 1, ttl_check_minutes: 4}
+
+strategies:
+  rsi_period: 6
+  volume_avg_candles: 2
+  defaults:
+    position_size: 25.0
+    max_positions: 5
+    initial_balance: 500.0
+    max_market_cap: 900000
+    min_market_cap: 20000
+    bbdown:
+      min_vol_window_usd: 1000
+      max_market_cap_entry: 400000
+      bbw_min_pct: 10
+      bbw_max_pct: 90
+      bearish_exit_cooldown_minutes: 5
+    bbup:
+      sma_sl_cooldown_minutes: 5
+      body_ratio_min: 0.5
+  bbdown:
+    sma_period: 5
+    bb_multiplier: 1.8
+    timeframe_minutes: 5
+    max_positions: 5
+    near_ubb_threshold: 0.01
+    partial_sell_pct: 0.4
+    baseline: {min_vol_window_usd: 800, max_market_cap_entry: 900000, bearish_exit_cooldown_minutes: 5}
+    current:  {min_vol_window_usd: 1000, max_market_cap_entry: 400000, bearish_exit_cooldown_minutes: 5}
+    hard_stop:
+      max_entry_mc: 400000
+      schedule: [[40000, 220000, 20000, 90000], [220000, 400000, 90000, 210000]]
+      recovery_hours: 1
+      recovery_mc: 400000
+  bbup:
+    sma_period: 6
+    bb_multiplier: 1.8
+    timeframe_minutes: 1
+    max_positions: 5
+    cooldown_minutes: 5
+    bb_width_min_pct: 5
+    min_rsi_entry: 40
+    min_avg_volume_usd: 100
+    env_min_volume_usd: 200
+    env_max_volume_usd: 50000
+    max_cycles_per_token: 50
+    max_cycles_cooldown_hours: 1
+
+scoring:
+  volume_per_candle_tiers: [[8000, 2], [2000, 1]]
+  bb_width_tiers: [[60, 3], [20, 2]]
+  vol_mc_ratio_tiers: [[15, 3]]
+  mc_sweet_spot: [150000, 350000]
+  mc_sweet_spot_points: 2
+  risk_zone: {max_mc: 60000, min_bb_width: 70, penalty: -1}
+
+system:
+  snapshot_interval_seconds: 100
+  cycle_rebuild_interval_seconds: 1000
+  heartbeat_interval_seconds: 30
+  sol_poll_interval_minutes: 30
+  restore_stale_age_seconds: 3000
+
+data_engine:
+  backfill_candles: 50
+  ws_reconnect_delay_seconds: 3
+  market_cap_poll_interval_seconds: 200
+
+data_provider:
+  launchpad_source_id: "test_launchpad"
+  auth_header: "X-TEST-KEY"
+  extra_headers: {}
+  max_server_filters: 3
+  endpoints: {token_list: "/list", token_security: "/security", price: "/price", ohlcv: "/ohlcv", token_overview: "/overview"}
+  credit_cost: {token_list: 1, token_security: 1, price: 1, token_overview: 1, ohlcv_tiers: [[150, 1], [1500, 2]]}
+  response_fields:
+    top10_holder_pct: top10_holder
+    top10_user_pct: top10_user
+    creator_pct: creator
+    freeze_authority: freeze
+    transfer_fee_enabled: transfer_fee
+    pre_market_holders: pre_market
+    creation_time: created
+    candle_time: t
+    candle_open: o
+    candle_high: h
+    candle_low: l
+    candle_close: c
+    candle_volume: v
+    event_address: address
+    event_interval: interval
+    overview_market_cap: mcap
+    stats_market_cap_keys: [mcap]
+    launchpad_info_block: launchpad
+  ws:
+    url_template: "{base}?key={key}"
+    subprotocol: "test"
+    type_key: "type"
+    price_event: "PRICE"
+    stats_event: "STATS"
+    max_batch_clauses: 10
+    credit_per_byte: 0.0
+    single_subscribe_template: {type: "SUB", data: {address: "{address}", interval: "{interval}"}}
+    batch_clause_template: "{address}:{interval}"
+    batch_clause_joiner: ","
+    batch_subscribe_template: {type: "SUB_MANY", data: {query: "{query}"}}
+    unsubscribe_template: {type: "UNSUB"}

@@ -1,0 +1,219 @@
+# ═══════════════════════════════════════════════════════════════════════
+# config.example.yaml — PUBLIC TEMPLATE (all tuned values redacted)
+# ═══════════════════════════════════════════════════════════════════════
+# Every numeric threshold, period, multiplier, interval, sizing value and
+# data-provider detail used by the system lives here. In this public copy
+# each value is the placeholder XXXX ("tuned privately").
+#
+# The loader (paper_trading/config/params.py) resolves, in order:
+#   1. $PT_CONFIG            explicit path (used by the tests)
+#   2. ./config.local.yaml   private, gitignored — the real values
+#   3. this file             placeholders only
+#
+# With only this file present, every module imports and the architecture can
+# be navigated, but any use of a redacted value raises RedactedParameterError.
+# ═══════════════════════════════════════════════════════════════════════
+
+# ── Friction model: fee + slippage + priority fee (execution/executor.py) ──
+friction:
+  dex_fee_pct: XXXX              # DEX fee as a fraction of trade notional (also the fee-generation proxy rate)
+  priority_fee_usd: XXXX         # flat priority fee per transaction, USD
+  slippage_threshold_mc: XXXX    # market-cap boundary between the two slippage tiers, USD
+  slippage_below: XXXX           # slippage fraction for MC below the boundary (applied both directions)
+  slippage_above: XXXX           # slippage fraction for MC at/above the boundary
+
+# ── Scanner filters (scanner/filters.py, funnel_manager.py, blacklist.py) ──
+scanner:
+  wide:                          # WIDE stage: token-list data only, zero extra credits
+    min_mcap: XXXX               # market-cap floor, USD
+    max_mcap: XXXX               # market-cap ceiling, USD
+    min_liquidity_ratio: XXXX    # minimum liquidity / market cap
+    max_age_seconds: XXXX        # older tokens are permanently blacklisted
+    min_volume_5m_usd: XXXX      # short-window volume floor, USD
+    fee_table_sol: XXXX          # [[mcap_ceiling_usd, min_fees_sol], ...] fee-generation tiers
+    fee_table_fallback_sol: XXXX # minimum fees above the last tier
+  narrow:                        # NARROW stage: one paid security call per token
+    holder_tiers: XXXX           # [[mcap_ceiling_usd, max_top10_pct], ...] holder-concentration ceilings
+    holder_fallback_max_pct: XXXX  # ceiling when market cap is unknown / above last tier
+    holder_tolerance_pct: XXXX   # band above the ceiling that demotes to Wide instead of blacklisting
+  borderline:                    # "close but not quite" tokens are parked in Wide for re-evaluation
+    below_min_factor: XXXX       # fraction of a minimum that still counts as borderline
+    above_max_factor: XXXX       # multiple of a maximum that still counts as borderline
+  blacklist_cooldown_hours: XXXX # temporary blacklist duration
+
+# ── Funnels: three-stage pipeline, one per strategy family ──
+funnels:
+  defaults:
+    wide_capacity: XXXX          # slots per tier
+    narrow_capacity: XXXX
+    full_capacity: XXXX
+    list_poll_interval_minutes: XXXX     # informational only; live cadence = phase_intervals
+    narrow_scan_interval_minutes: XXXX
+    min_market_cap: XXXX         # server-side token-list query filters
+    max_market_cap: XXXX
+    min_liquidity: XXXX
+    ws_timeframe_minutes: XXXX   # WebSocket candle timeframe for this funnel
+  bbup:
+    full_capacity: XXXX
+    list_poll_interval_minutes: XXXX
+    narrow_scan_interval_minutes: XXXX
+    min_volume_5m_usd: XXXX      # server-side volume pre-filter (BBUP funnel)
+    ws_timeframe_minutes: XXXX
+  bbdown:
+    full_capacity: XXXX
+    list_poll_interval_minutes: XXXX
+    narrow_scan_interval_minutes: XXXX
+    min_volume_5m_usd: XXXX      # 0 = broad query (no volume pre-filter)
+    ws_timeframe_minutes: XXXX
+  buckets:
+    wide_ttl_seconds: XXXX       # time-to-live per tier
+    narrow_ttl_seconds: XXXX
+    full_ttl_seconds: XXXX
+    depleted_fill_pct: XXXX      # fill level that triggers REFILL phase
+    critical_fill_pct: XXXX      # fill level that triggers faster narrow scans (wide/narrow)
+    critical_fill_pct_full: XXXX # same, for the Full tier
+  phase_intervals:               # phase-driven polling cadence — main lever on API credit spend
+                                 # (ttl_check_minutes is reported only; the TTL sweep runs on a fixed loop)
+    initial_fill:                # aggressive until the pipeline is first filled
+      list_poll_minutes: XXXX
+      narrow_scan_minutes: XXXX
+      ttl_check_minutes: XXXX
+    maintenance:                 # steady state: back off to conserve credits
+      list_poll_minutes: XXXX
+      narrow_scan_minutes: XXXX
+      ttl_check_minutes: XXXX
+    refill:                      # a bucket is depleted: speed up again
+      list_poll_minutes: XXXX
+      narrow_scan_minutes: XXXX
+      narrow_scan_minutes_critical: XXXX
+      ttl_check_minutes: XXXX
+
+# ── Strategies (strategies/*.py, orchestrator/config.py) ──
+strategies:
+  rsi_period: XXXX
+  volume_avg_candles: XXXX       # rolling volume window length (candles)
+  defaults:                      # sizing + defaults shared by every instance
+    position_size: XXXX          # USD per entry
+    max_positions: XXXX
+    initial_balance: XXXX        # simulated starting balance per instance
+    max_market_cap: XXXX
+    min_market_cap: XXXX
+    bbdown:
+      min_vol_window_usd: XXXX
+      max_market_cap_entry: XXXX
+      bbw_min_pct: XXXX          # band-width window (only when the filter is on)
+      bbw_max_pct: XXXX
+      bearish_exit_cooldown_minutes: XXXX
+    bbup:
+      sma_sl_cooldown_minutes: XXXX
+      body_ratio_min: XXXX       # trigger-candle body/range minimum
+  bbdown:                        # mean reversion: buy lower band, 2-stage exit
+    sma_period: XXXX
+    bb_multiplier: XXXX
+    timeframe_minutes: XXXX
+    max_positions: XXXX
+    near_ubb_threshold: XXXX     # proximity to the upper band that counts as a touch
+    partial_sell_pct: XXXX       # fraction sold at the SMA
+    baseline:                    # previous-generation ablation values
+      min_vol_window_usd: XXXX
+      max_market_cap_entry: XXXX
+      bearish_exit_cooldown_minutes: XXXX
+    current:                     # current-generation ablation values
+      min_vol_window_usd: XXXX
+      max_market_cap_entry: XXXX
+      bearish_exit_cooldown_minutes: XXXX
+    hard_stop:                   # market-cap hard stop (piecewise-linear in entry MC)
+      max_entry_mc: XXXX         # entries at/above this get no hard stop
+      schedule: XXXX             # [[entry_mc_lo, entry_mc_hi, stop_mc_lo, stop_mc_hi], ...]
+      recovery_hours: XXXX       # wait before re-entry after a hard stop
+      recovery_mc: XXXX          # market cap that must be regained before re-entry
+  bbup:                          # momentum: SMA cross-up, upper-band target, SMA stop
+    sma_period: XXXX
+    bb_multiplier: XXXX
+    timeframe_minutes: XXXX
+    max_positions: XXXX
+    cooldown_minutes: XXXX       # post-SMA-stop cooldown (cooldown-ON instances)
+    bb_width_min_pct: XXXX
+    min_rsi_entry: XXXX
+    min_avg_volume_usd: XXXX     # base volume gate
+    env_min_volume_usd: XXXX     # environment window: avg volume must be within [min, max)
+    env_max_volume_usd: XXXX
+    max_cycles_per_token: XXXX
+    max_cycles_cooldown_hours: XXXX
+
+# ── Passive scoring (recording/scoring_collector.py) — logged, never traded on ──
+scoring:
+  volume_per_candle_tiers: XXXX  # [[min_value, points], ...] highest first
+  bb_width_tiers: XXXX
+  vol_mc_ratio_tiers: XXXX
+  mc_sweet_spot: XXXX            # [lo, hi] market-cap band that earns a bonus
+  mc_sweet_spot_points: XXXX
+  risk_zone:                     # BBDOWN-only penalty region
+    max_mc: XXXX
+    min_bb_width: XXXX
+    penalty: XXXX
+
+# ── System cadence ──
+system:
+  snapshot_interval_seconds: XXXX
+  cycle_rebuild_interval_seconds: XXXX
+  heartbeat_interval_seconds: XXXX
+  sol_poll_interval_minutes: XXXX
+  restore_stale_age_seconds: XXXX  # restored positions older than this are flagged stale
+
+data_engine:
+  backfill_candles: XXXX
+  ws_reconnect_delay_seconds: XXXX
+  market_cap_poll_interval_seconds: XXXX  # REST fallback when the stats stream is missing a token
+
+# ── Data provider (identity redacted) ──
+# Base URLs and the API key come from the environment (.env.example).
+data_provider:
+  launchpad_source_id: XXXX      # provider's identifier for PumpFun-launched tokens
+  auth_header: XXXX              # name of the API-key header
+  extra_headers: {}              # any additional required headers
+  max_server_filters: XXXX       # provider cap on server-side filters per list request
+  endpoints:                     # REST paths appended to DATA_PROVIDER_REST_URL
+    token_list: XXXX
+    token_security: XXXX
+    price: XXXX
+    ohlcv: XXXX
+    token_overview: XXXX
+  credit_cost:                   # credits charged per call (plan details redacted)
+    token_list: XXXX
+    token_security: XXXX
+    price: XXXX
+    token_overview: XXXX
+    ohlcv_tiers: XXXX            # [[max_candles, credits], ...]
+  response_fields:               # provider JSON key for each neutral field name
+    top10_holder_pct: XXXX
+    top10_user_pct: XXXX
+    creator_pct: XXXX
+    freeze_authority: XXXX
+    transfer_fee_enabled: XXXX
+    pre_market_holders: XXXX
+    creation_time: XXXX
+    candle_time: XXXX
+    candle_open: XXXX
+    candle_high: XXXX
+    candle_low: XXXX
+    candle_close: XXXX
+    candle_volume: XXXX
+    event_address: XXXX
+    event_interval: XXXX
+    overview_market_cap: XXXX
+    stats_market_cap_keys: XXXX  # list of candidate keys, tried in order
+    launchpad_info_block: XXXX
+  ws:                            # WebSocket protocol adapter
+    url_template: XXXX           # formatted with {base} (DATA_PROVIDER_WS_URL) and {key}
+    subprotocol: XXXX
+    type_key: XXXX               # message field holding the event type
+    price_event: XXXX
+    stats_event: XXXX
+    max_batch_clauses: XXXX      # provider cap per batched subscription
+    credit_per_byte: XXXX        # streaming is billed per byte received
+    single_subscribe_template: XXXX  # message template, {address} {interval}
+    batch_clause_template: XXXX      # one clause, {address} {interval}
+    batch_clause_joiner: XXXX
+    batch_subscribe_template: XXXX   # message template, {query}
+    unsubscribe_template: XXXX
